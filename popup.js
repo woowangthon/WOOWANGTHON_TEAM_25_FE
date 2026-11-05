@@ -1,19 +1,30 @@
 function extractBusinessInfo() {
-  const text = document.body.innerText;
+  
+  const text = document.body.innerText
+    .replace(/\r/g, "")
+    .replace(/[ \t\u00a0]+/g, " ");
 
-  const businessNumber = text.match(
-    /사업자\s*(?:등록\s*)?번호\s*[:：]?\s*(\d{3}\s*-\s*\d{2}\s*-\s*\d{5}|\d{10})(?!\d)/
-  )?.[1]?.replace(/\D/g, "") ?? null;
+  const businessNumber =
+    text.match(
+      /사업자\s*(?:등록\s*)?번호\s*[:：]?\s*(\d{3}\s*-\s*\d{2}\s*-\s*\d{5}|\d{10})(?!\d)/
+    )?.[1]?.replace(/\D/g, "") ?? null;
 
   const companyName =
-    text.match(/상호명 및 호스팅 서비스 제공\s*[:：]\s*([^\n|]+)/)?.[1]?.trim()
-    ?? text.match(/법인명\s*\(상호\)\s*[:：]\s*(.*?)\s*사업자등록번호/)?.[1]?.trim()
-    ?? text.match(/\(주\)\s*무신사(?=\s*\|)/)?.[0]?.trim()
+    text.match(
+      /(?:상호명\s*및\s*호스팅\s*서비스\s*제공|법인명\s*\(상호\)|법인명|상호명|상호|회사명)\s*[:：]?\s*([^\n|]+?)(?=\s*(?:대표이사|대표자|대표명|대표|사업자\s*(?:등록\s*)?번호|주소)\s*[:：]|[\n|]|$)/
+    )?.[1]?.trim()
+    ?? text.match(
+      /^([^\n|]+?)\s*\|\s*대표(?:이사|자|명)?\s*[:：]/m
+    )?.[1]?.trim()
+    ?? text.match(
+      /(?:^|\n)[ \t]*((?:\(주\)|주식회사)[^\n|]+)\n[ \t]*사업자\s*(?:등록\s*)?번호/
+    )?.[1]?.trim()
     ?? null;
 
   const representativeName =
-    text.match(/(?:대표이사|대표자)\s*[:：]\s*([^\n|]+)/)?.[1]?.trim()
-    ?? null;
+    text.match(
+      /대표(?:이사|자|명)?\s*[:：]\s*([^\n|]+?)(?=\s*(?:개인정보|(?:주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일)\s*[:：])|[\n|]|$)/
+    )?.[1]?.trim() ?? null;
 
   return { businessNumber, companyName, representativeName };
 }
