@@ -51,3 +51,64 @@ async function showBusinessInfo() {
 }
 
 showBusinessInfo();
+
+const sampleChecks = [
+  {
+    title: "국세청 사업자 상태",
+    status: "match",
+    label: "계속사업자",
+    reason: "예시 업체는 계속사업자로 조회되었습니다."
+  },
+  {
+    title: "공정위 업체 정보 대조",
+    status: "mismatch",
+    label: "상호 불일치",
+    reason: "사이트 표시 상호와 조회된 상호가 다릅니다.",
+    siteValue: "예시상점",
+    referenceValue: "예시유통 주식회사"
+  },
+  {
+    title: "도메인 비교",
+    status: "unknown",
+    label: "확인 불가",
+    reason: "조회 자료에 등록 도메인 정보가 없습니다."
+  }
+];
+
+function renderCheckResults(checks) {
+  const container = document.getElementById("checkResults");
+  container.replaceChildren();
+
+  for (const check of checks) {
+    const card = document.createElement("section");
+    card.className = "result";
+
+    const title = document.createElement("h3");
+    title.textContent = check.title;
+
+    const label = document.createElement("p");
+    label.className = check.status;
+    label.textContent = check.label;
+
+    const reason = document.createElement("p");
+    reason.textContent = check.reason;
+
+    card.append(title, label, reason);
+
+    if (check.status === "mismatch") {
+      const siteValue = document.createElement("p");
+      siteValue.textContent = `사이트 표시값 · ${check.siteValue}`;
+
+      const referenceValue = document.createElement("p");
+      referenceValue.textContent = `조회된 값 · ${check.referenceValue}`;
+
+      card.append(siteValue, referenceValue);
+    }
+
+    container.append(card);
+  }
+}
+
+document.getElementById("showSample").addEventListener("click", () => {
+  renderCheckResults(sampleChecks);
+});

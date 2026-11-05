@@ -5,15 +5,57 @@
     <title>우왕톤</title>
     <style>
       body {
-        width: 280px;
+        width: 340px;
         margin: 16px;
         font-family: system-ui, sans-serif;
+        color: #222;
       }
 
       h1 {
-        margin: 0 0 8px;
+        margin: 0 0 16px;
         font-size: 20px;
       }
+
+      h2 {
+        margin: 20px 0 8px;
+        font-size: 17px;
+      }
+
+      p {
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      button {
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      .notice {
+        color: #666;
+        font-size: 12px;
+      }
+
+      .result {
+        margin-top: 10px;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      .result h3 {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+
+      .result p {
+        margin: 4px 0;
+        font-size: 13px;
+      }
+
+      .match { color: #176534; }
+      .mismatch { color: #b42318; }
+      .unknown { color: #755800; }
     </style>
   </head>
   <body>
@@ -22,6 +64,16 @@
     <p>상호 <strong id="companyName">—</strong></p>
     <p>대표자 <strong id="representativeName">—</strong></p>
     <p id="status" role="status">페이지를 읽는 중…</p>
+
+    <hr>
+
+    <h2>검사 결과</h2>
+    <p class="notice">
+      개발용 예시입니다. 아래 결과와 업체명은 가상 데이터입니다.
+    </p>
+    <button id="showSample" type="button">예시 결과 보기</button>
+    <div id="checkResults" aria-live="polite"></div>
+
     <script src="popup.js"></script>
   </body>
 </html>
