@@ -31,21 +31,41 @@ function extractBusinessInfo() {
 
 async function showBusinessInfo() {
   const status = document.getElementById("status");
+  status.textContent = "페이지에서 사업자정보를 찾는 중…";
 
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const [{ result }] = await chrome.scripting.executeScript({
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+
+    if (!tab?.id) {
+      status.textContent = "현재 탭을 찾지 못했어요. 다시 열어주세요.";
+      return;
+    }
+
+    const [response] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: extractBusinessInfo
     });
+
+    const result = response?.result;
+
+    if (!result) {
+      status.textContent = "사업자정보를 읽지 못했어요. 다시 시도해주세요.";
+      return;
+    }
 
     for (const [field, value] of Object.entries(result)) {
       document.getElementById(field).textContent = value || "찾지 못함";
     }
 
-    status.textContent = "현재 페이지에 표시된 정보예요.";
+    status.textContent = result.businessNumber
+      ? "현재 페이지에 표시된 정보예요."
+      : "이 페이지에서 사업자번호를 찾지 못했어요.";
   } catch (error) {
-    status.textContent = "이 탭을 읽을 수 없어요. 쇼핑몰 탭에서 다시 열어주세요.";
+    status.textContent =
+      "페이지에 접근하지 못했어요. 쇼핑몰 탭에서 다시 열어주세요.";
     console.error(error);
   }
 }
