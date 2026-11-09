@@ -1,5 +1,6 @@
+const SCAN_API_URL = "https://127.0.0.1:8000/api/v1/scan/";
+
 function extractBusinessInfo() {
-  
   const text = document.body.innerText
     .replace(/\r/g, "")
     .replace(/[ \t\u00a0]+/g, " ");
@@ -29,6 +30,32 @@ function extractBusinessInfo() {
   return { businessNumber, companyName, representativeName };
 }
 
+async function requestScan(url, businessInfo) {
+  const businessNumber = businessInfo.businessNumber.replace(
+    /^(\d{3})(\d{2})(\d{5})$/,
+    "$1-$2-$3"
+  );
+
+  const response = await fetch(SCAN_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url,
+      business_info: {
+        business_name: businessInfo.companyName,
+        representative_name: businessInfo.representativeName,
+        business_number: businessNumber
+      }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`스캔 요청 실패 (HTTP ${response.status})`);
+  }
+
+  return response.json();
+}
+
 async function showBusinessInfo() {
   const status = document.getElementById("status");
   status.textContent = "페이지에서 사업자정보를 찾는 중…";
@@ -39,7 +66,7 @@ async function showBusinessInfo() {
       currentWindow: true
     });
 
-    if (!tab?.id) {
+    if (tab?.id == null) {
       status.textContent = "현재 탭을 찾지 못했어요. 다시 열어주세요.";
       return;
     }
@@ -60,17 +87,31 @@ async function showBusinessInfo() {
       document.getElementById(field).textContent = value || "찾지 못함";
     }
 
-    status.textContent = result.businessNumber
-      ? "현재 페이지에 표시된 정보예요."
-      : "이 페이지에서 사업자번호를 찾지 못했어요.";
+    if (!result.businessNumber) {
+      status.textContent = "이 페이지에서 사업자번호를 찾지 못했어요.";
+      return;
+    }
+
+    if (!tab.url) {
+      status.textContent = "현재 페이지 주소를 읽지 못해 확인 요청을 보낼 수 없어요.";
+      return;
+    }
+
+    try {
+      status.textContent = "백엔드에 확인 요청을 보내는 중…";
+      const scanResult = await requestScan(tab.url, result);
+      console.log("스캔 응답", scanResult);
+      status.textContent = "백엔드 응답을 받았어요.";
+    } catch (error) {
+      status.textContent = "사업자정보는 추출했지만 확인 요청에 실패했어요.";
+      console.error("스캔 요청 오류", error);
+    }
   } catch (error) {
     status.textContent =
       "페이지에 접근하지 못했어요. 쇼핑몰 탭에서 다시 열어주세요.";
-    console.error(error);
+    console.error("사업자정보 추출 오류", error);
   }
 }
-
-showBusinessInfo();
 
 const sampleChecks = [
   {
@@ -132,3 +173,5 @@ function renderCheckResults(checks) {
 document.getElementById("showSample").addEventListener("click", () => {
   renderCheckResults(sampleChecks);
 });
+
+showBusinessInfo();
