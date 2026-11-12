@@ -1,4 +1,4 @@
-const SCAN_API_URL = "https://127.0.0.1:8000/api/v1/scan/";
+const SCAN_API_URL = "http://127.0.0.1:8000/api/v1/scan/";
 
 function extractBusinessInfo() {
   const text = document.body.innerText
@@ -77,6 +77,7 @@ async function showBusinessInfo() {
     });
 
     const result = response?.result;
+    console.log("[우왕톤] 추출 결과", result);
 
     if (!result) {
       status.textContent = "사업자정보를 읽지 못했어요. 다시 시도해주세요.";
@@ -100,16 +101,16 @@ async function showBusinessInfo() {
     try {
       status.textContent = "백엔드에 확인 요청을 보내는 중…";
       const scanResult = await requestScan(tab.url, result);
-      console.log("스캔 응답", scanResult);
+      console.log("[우왕톤] 스캔 응답", scanResult);
       status.textContent = "백엔드 응답을 받았어요.";
     } catch (error) {
       status.textContent = "사업자정보는 추출했지만 확인 요청에 실패했어요.";
-      console.error("스캔 요청 오류", error);
+      console.error("[우왕톤] 스캔 요청 오류", error);
     }
   } catch (error) {
     status.textContent =
       "페이지에 접근하지 못했어요. 쇼핑몰 탭에서 다시 열어주세요.";
-    console.error("사업자정보 추출 오류", error);
+    console.error("[우왕톤] 사업자정보 추출 오류", error);
   }
 }
 
@@ -170,7 +171,7 @@ function renderCheckResults(checks) {
   }
 }
 
-document.getElementById("showSample").addEventListener("click", () => {
+document.getElementById("showSample")?.addEventListener("click", () => {
   renderCheckResults(sampleChecks);
 });
 
