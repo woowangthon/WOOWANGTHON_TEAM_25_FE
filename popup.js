@@ -1,7 +1,7 @@
 const SCAN_API_URL = "http://127.0.0.1:8000/api/v1/scan/";
 
 function extractBusinessInfo() {
-  const text = document.body.innerText
+  const text = (document.body?.innerText ?? "")
     .replace(/\r/g, "")
     .replace(/[ \t\u00a0]+/g, " ");
 
@@ -56,86 +56,44 @@ async function requestScan(url, businessInfo) {
   return response.json();
 }
 
-async function showBusinessInfo() {
-  const status = document.getElementById("status");
-  status.textContent = "페이지에서 사업자정보를 찾는 중…";
+function buildScanChecks(scanResult) {
+  const nts = scanResult.analyses?.nts;
+  const ftc = scanResult.analyses?.ftc;
+  const businessStatus =
+    nts?.status === "completed" ? nts.business_status : null;
+  const isActive = businessStatus === "ACTIVE";
 
-  try {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true
-    });
-
-    if (tab?.id == null) {
-      status.textContent = "현재 탭을 찾지 못했어요. 다시 열어주세요.";
-      return;
+  return [
+    {
+      title: "국세청 사업자 상태",
+      status: isActive ? "match" : "unknown",
+      label: isActive ? "계속사업자" : (businessStatus ?? "확인 불가"),
+      reason: businessStatus
+        ? "국세청에서 반환한 사업자 상태예요."
+        : "국세청 조회 결과를 확인할 수 없어요."
+    },
+    {
+      title: "공정위 업체 정보 대조",
+      status: "unknown",
+      label: "확인 불가",
+      reason: ftc?.status === "not_configured"
+        ? "공정위 조회가 아직 설정되지 않았어요."
+        : "공정위 대조 결과를 이 화면에서 확인할 수 없어요."
+    },
+    {
+      title: "종합 판정",
+      status: "unknown",
+      label: scanResult.verdict === "UNDETERMINED"
+        ? "미정"
+        : (scanResult.verdict ?? "확인 불가"),
+      reason: scanResult.verdict === "UNDETERMINED"
+        ? "백엔드에서 아직 종합 판정을 내리지 않았어요."
+        : scanResult.verdict
+          ? "백엔드에서 반환한 판정이에요."
+          : "종합 판정 결과를 확인할 수 없어요."
     }
-
-    const [response] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: extractBusinessInfo
-    });
-
-    const result = response?.result;
-    console.log("[우왕톤] 추출 결과", result);
-
-    if (!result) {
-      status.textContent = "사업자정보를 읽지 못했어요. 다시 시도해주세요.";
-      return;
-    }
-
-    for (const [field, value] of Object.entries(result)) {
-      document.getElementById(field).textContent = value || "찾지 못함";
-    }
-
-    if (!result.businessNumber) {
-      status.textContent = "이 페이지에서 사업자번호를 찾지 못했어요.";
-      return;
-    }
-
-    if (!tab.url) {
-      status.textContent = "현재 페이지 주소를 읽지 못해 확인 요청을 보낼 수 없어요.";
-      return;
-    }
-
-    try {
-      status.textContent = "백엔드에 확인 요청을 보내는 중…";
-      const scanResult = await requestScan(tab.url, result);
-      console.log("[우왕톤] 스캔 응답", scanResult);
-      status.textContent = "백엔드 응답을 받았어요.";
-    } catch (error) {
-      status.textContent = "사업자정보는 추출했지만 확인 요청에 실패했어요.";
-      console.error("[우왕톤] 스캔 요청 오류", error);
-    }
-  } catch (error) {
-    status.textContent =
-      "페이지에 접근하지 못했어요. 쇼핑몰 탭에서 다시 열어주세요.";
-    console.error("[우왕톤] 사업자정보 추출 오류", error);
-  }
+  ];
 }
-
-const sampleChecks = [
-  {
-    title: "국세청 사업자 상태",
-    status: "match",
-    label: "계속사업자",
-    reason: "예시 업체는 계속사업자로 조회되었습니다."
-  },
-  {
-    title: "공정위 업체 정보 대조",
-    status: "mismatch",
-    label: "상호 불일치",
-    reason: "사이트 표시 상호와 조회된 상호가 다릅니다.",
-    siteValue: "예시상점",
-    referenceValue: "예시유통 주식회사"
-  },
-  {
-    title: "도메인 비교",
-    status: "unknown",
-    label: "확인 불가",
-    reason: "조회 자료에 등록 도메인 정보가 없습니다."
-  }
-];
 
 function renderCheckResults(checks) {
   const container = document.getElementById("checkResults");
@@ -156,23 +114,80 @@ function renderCheckResults(checks) {
     reason.textContent = check.reason;
 
     card.append(title, label, reason);
-
-    if (check.status === "mismatch") {
-      const siteValue = document.createElement("p");
-      siteValue.textContent = `사이트 표시값 · ${check.siteValue}`;
-
-      const referenceValue = document.createElement("p");
-      referenceValue.textContent = `조회된 값 · ${check.referenceValue}`;
-
-      card.append(siteValue, referenceValue);
-    }
-
     container.append(card);
   }
 }
 
-document.getElementById("showSample")?.addEventListener("click", () => {
-  renderCheckResults(sampleChecks);
-});
+async function showBusinessInfo() {
+  const status = document.getElementById("status");
+  status.textContent = "페이지에서 사업자정보를 찾는 중…";
+
+  let tab;
+  let result;
+
+  try {
+    [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    });
+
+    if (tab?.id == null) {
+      status.textContent = "현재 탭을 찾지 못했어요. 다시 열어주세요.";
+      return;
+    }
+
+    const [response] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: extractBusinessInfo
+    });
+
+    result = response?.result;
+    console.log("[우왕톤] 추출 결과", result);
+  } catch (error) {
+    status.textContent =
+      "페이지에 접근하지 못했어요. 쇼핑몰 탭에서 다시 열어주세요.";
+    console.error("[우왕톤] 사업자정보 추출 오류", error);
+    return;
+  }
+
+  if (!result) {
+    status.textContent = "사업자정보를 읽지 못했어요. 다시 시도해주세요.";
+    return;
+  }
+
+  for (const [field, value] of Object.entries(result)) {
+    document.getElementById(field).textContent = value || "찾지 못함";
+  }
+
+  if (!result.businessNumber) {
+    status.textContent = "이 페이지에서 사업자번호를 찾지 못했어요.";
+    return;
+  }
+
+  if (!tab.url) {
+    status.textContent = "현재 페이지 주소를 읽지 못해 확인 요청을 보낼 수 없어요.";
+    return;
+  }
+
+  let scanResult;
+
+  try {
+    status.textContent = "백엔드에 확인 요청을 보내는 중…";
+    scanResult = await requestScan(tab.url, result);
+    console.log("[우왕톤] 스캔 응답", scanResult);
+  } catch (error) {
+    status.textContent = "사업자정보는 추출했지만 확인 요청에 실패했어요.";
+    console.error("[우왕톤] 스캔 요청 오류", error);
+    return;
+  }
+
+  try {
+    renderCheckResults(buildScanChecks(scanResult));
+    status.textContent = "백엔드 응답을 받았어요.";
+  } catch (error) {
+    status.textContent = "백엔드 응답을 받았지만 결과를 표시하지 못했어요.";
+    console.error("[우왕톤] 스캔 결과 표시 오류", error);
+  }
+}
 
 showBusinessInfo();
