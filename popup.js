@@ -45,7 +45,7 @@ function extractBusinessInfo() {
 }
 
 async function requestScan(url, businessInfo) {
-  const businessNumber = businessInfo.businessNumber.replace(
+  const businessNumber = (businessInfo.businessNumber ?? "").replace(
     /^(\d{3})(\d{2})(\d{5})$/,
     "$1-$2-$3"
   );
@@ -70,21 +70,28 @@ async function requestScan(url, businessInfo) {
   return response.json();
 }
 
-function buildScanChecks(scanResult) {
+function buildScanChecks(scanResult, businessInfo) {
   const nts = scanResult.analyses?.nts;
   const ftc = scanResult.analyses?.ftc;
   const businessStatus =
     nts?.status === "completed" ? nts.business_status : null;
   const isActive = businessStatus === "ACTIVE";
 
+  let ntsReason = "국세청 조회 결과를 확인할 수 없어요.";
+  if (businessStatus) {
+    ntsReason = "국세청에서 반환한 사업자 상태예요.";
+  } else if (businessInfo.invalidBusinessNumber) {
+    ntsReason = "페이지에 표시된 사업자번호의 형식이 올바르지 않아요.";
+  } else if (!businessInfo.businessNumber) {
+    ntsReason = "페이지에서 사업자번호를 찾지 못했어요.";
+  }
+
   return [
     {
       title: "국세청 사업자 상태",
       status: isActive ? "match" : "unknown",
       label: isActive ? "계속사업자" : (businessStatus ?? "확인 불가"),
-      reason: businessStatus
-        ? "국세청에서 반환한 사업자 상태예요."
-        : "국세청 조회 결과를 확인할 수 없어요."
+      reason: ntsReason
     },
     {
       title: "공정위 업체 정보 대조",
@@ -169,19 +176,12 @@ async function showBusinessInfo() {
     return;
   }
 
-  for (const field of ["businessNumber", "companyName", "representativeName"]) {
-    document.getElementById(field).textContent = result[field] || "찾지 못함";
-  }
-
-  if (!result.businessNumber) {
-    if (result.invalidBusinessNumber) {
-      document.getElementById("businessNumber").textContent = "형식 오류";
-      status.textContent = "페이지에 표시된 사업자번호 형식이 올바르지 않아요.";
-    } else {
-      status.textContent = "이 페이지에서 사업자번호를 찾지 못했어요.";
-    }
-    return;
-  }
+  document.getElementById("businessNumber").textContent =
+    result.businessNumber ?? (result.invalidBusinessNumber ? "형식 오류" : "찾지 못함");
+  document.getElementById("companyName").textContent =
+    result.companyName || "찾지 못함";
+  document.getElementById("representativeName").textContent =
+    result.representativeName || "찾지 못함";
 
   if (!tab.url) {
     status.textContent = "현재 페이지 주소를 읽지 못해 확인 요청을 보낼 수 없어요.";
@@ -195,13 +195,13 @@ async function showBusinessInfo() {
     scanResult = await requestScan(tab.url, result);
     console.log("[우왕톤] 스캔 응답", scanResult);
   } catch (error) {
-    status.textContent = "사업자정보는 추출했지만 확인 요청에 실패했어요.";
+    status.textContent = "백엔드 확인 요청에 실패했어요.";
     console.error("[우왕톤] 스캔 요청 오류", error);
     return;
   }
 
   try {
-    renderCheckResults(buildScanChecks(scanResult));
+    renderCheckResults(buildScanChecks(scanResult, result));
     status.textContent = "백엔드 응답을 받았어요.";
   } catch (error) {
     status.textContent = "백엔드 응답을 받았지만 결과를 표시하지 못했어요.";
