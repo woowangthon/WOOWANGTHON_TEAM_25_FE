@@ -5,10 +5,19 @@ function extractBusinessInfo() {
     .replace(/\r/g, "")
     .replace(/[ \t\u00a0]+/g, " ");
 
-  const businessNumber =
-    text.match(
-      /사업자\s*(?:등록\s*)?번호\s*[:：]?\s*(\d{3}\s*-\s*\d{2}\s*-\s*\d{5}|\d{10})(?!\d)/
-    )?.[1]?.replace(/\D/g, "") ?? null;
+  const numberCandidates = Array.from(
+    text.matchAll(
+      /사업자\s*(?:등록\s*)?번호\s*[:：]?\s*(\d+(?: *- *\d+)*)/g
+    ),
+    (match) => match[1]
+  );
+
+  const validNumber = numberCandidates.find((candidate) =>
+    /^(?:\d{10}|\d{3} *- *\d{2} *- *\d{5})$/.test(candidate)
+  );
+
+  const businessNumber = validNumber?.replace(/\D/g, "") ?? null;
+  const invalidBusinessNumber = !businessNumber && numberCandidates.length > 0;
 
   const companyName =
     text.match(
@@ -27,7 +36,12 @@ function extractBusinessInfo() {
       /대표(?:이사|자|명)?\s*[:：]\s*([^\n|]+?)(?=\s*(?:개인정보|(?:주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일)\s*[:：])|[\n|]|$)/
     )?.[1]?.trim() ?? null;
 
-  return { businessNumber, companyName, representativeName };
+  return {
+    businessNumber,
+    companyName,
+    representativeName,
+    invalidBusinessNumber
+  };
 }
 
 async function requestScan(url, businessInfo) {
@@ -155,12 +169,17 @@ async function showBusinessInfo() {
     return;
   }
 
-  for (const [field, value] of Object.entries(result)) {
-    document.getElementById(field).textContent = value || "찾지 못함";
+  for (const field of ["businessNumber", "companyName", "representativeName"]) {
+    document.getElementById(field).textContent = result[field] || "찾지 못함";
   }
 
   if (!result.businessNumber) {
-    status.textContent = "이 페이지에서 사업자번호를 찾지 못했어요.";
+    if (result.invalidBusinessNumber) {
+      document.getElementById("businessNumber").textContent = "형식 오류";
+      status.textContent = "페이지에 표시된 사업자번호 형식이 올바르지 않아요.";
+    } else {
+      status.textContent = "이 페이지에서 사업자번호를 찾지 못했어요.";
+    }
     return;
   }
 
