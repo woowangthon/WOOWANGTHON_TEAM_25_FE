@@ -8,15 +8,14 @@ function extractBusinessInfo() {
   const numberCandidates = Array.from(
     text.matchAll(
       /사업자\s*(?:등록\s*)?번호\s*[:：]?\s*(\d+(?: *- *\d+)*)/g
-    ),
-    (match) => match[1]
+    )
   );
 
-  const validNumber = numberCandidates.find((candidate) =>
-    /^(?:\d{10}|\d{3} *- *\d{2} *- *\d{5})$/.test(candidate)
+  const validNumber = numberCandidates.find((match) =>
+    /^(?:\d{10}|\d{3} *- *\d{2} *- *\d{5})$/.test(match[1])
   );
 
-  const businessNumber = validNumber?.replace(/\D/g, "") ?? null;
+  const businessNumber = validNumber?.[1].replace(/\D/g, "") ?? null;
   const invalidBusinessNumber = !businessNumber && numberCandidates.length > 0;
 
   const companyName =
@@ -33,14 +32,42 @@ function extractBusinessInfo() {
 
   const representativeName =
     text.match(
-      /대표(?:이사|자|명)?\s*[:：]\s*([^\n|]+?)(?=\s*(?:개인정보|(?:주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일)\s*[:：])|[\n|]|$)/
+      /대표(?:이사|자|명)?\s*[:：]\s*([^\n|]+?)(?=\s*(?:개인정보|(?:주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일)\s*[:：]|\(\d{5}\))|[\n|]|$)/
     )?.[1]?.trim() ?? null;
+
+  const addressEnd =
+    /[ \t]*(?:(?:사업자\s*(?:등록\s*)?번호|통신판매업(?:\s*신고(?:\s*번호)?)?|전화번호|대표번호|이메일|개인정보담당자|대표이사|대표자|상호명|상호|법인명|회사명)\s*[:：=]|\||\n)/;
+
+  const businessNumberIndex =
+    validNumber?.index ?? numberCandidates[0]?.index;
+
+  const businessInfoText = businessNumberIndex === undefined
+    ? ""
+    : text.slice(
+        Math.max(0, businessNumberIndex - 400),
+        businessNumberIndex + 400
+      );
+
+  const postalAddress = businessInfoText.match(
+    /\(\d{5}\)\s*((?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|충청|전북|전남|전라|경북|경남|경상|제주)[^\n|]*)/
+  )?.[1]?.split(addressEnd)[0].trim();
+
+  const address =
+    text.match(
+      /(?:사업장\s*(?:주소|소재지)|사업소\s*소재지|본사\s*주소)\s*[:：=]\s*([^\n|]+)/
+    )?.[1]?.split(addressEnd)[0].trim()
+    || text.match(
+      /(?:소재지|주소)\s*[:：=]\s*([^\n|]+)/
+    )?.[1]?.split(addressEnd)[0].trim()
+    || postalAddress
+    || "";
 
   return {
     businessNumber,
     companyName,
     representativeName,
-    invalidBusinessNumber
+    invalidBusinessNumber,
+    address
   };
 }
 
@@ -58,7 +85,8 @@ async function requestScan(url, businessInfo) {
       business_info: {
         business_name: businessInfo.companyName,
         representative_name: businessInfo.representativeName,
-        business_number: businessNumber
+        business_number: businessNumber,
+        address: businessInfo.address
       }
     })
   });
@@ -177,9 +205,12 @@ async function showBusinessInfo() {
   }
 
   document.getElementById("businessNumber").textContent =
-    result.businessNumber ?? (result.invalidBusinessNumber ? "형식 오류" : "찾지 못함");
+    result.businessNumber
+    ?? (result.invalidBusinessNumber ? "형식 오류" : "찾지 못함");
+
   document.getElementById("companyName").textContent =
     result.companyName || "찾지 못함";
+
   document.getElementById("representativeName").textContent =
     result.representativeName || "찾지 못함";
 
