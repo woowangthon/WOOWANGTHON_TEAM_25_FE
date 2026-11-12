@@ -4,10 +4,27 @@ function extractBusinessInfo() {
   const text = (document.body?.innerText ?? "")
     .replace(/\r/g, "")
     .replace(/[ \t\u00a0]+/g, " ");
+  
+  const footerItems = Array.from(
+    document.querySelectorAll("footer li, .footer_pc li"),
+    (item) => item.textContent.trim()
+  );
+
+  const englishBusinessNumbers = footerItems
+    .map((item) =>
+      item.match(/^Business[ \t]+License[ \t]*[:：=＝][ \t]*(\d+(?: *- *\d+)*)$/i)
+    )
+    .filter(Boolean);
 
   const numberCandidates = Array.from(
     text.matchAll(
       /사업자\s*(?:등록\s*)?번호\s*[:：]?\s*(\d+(?: *- *\d+)*)/g
+    )
+  );
+
+  numberCandidates.push(
+    ...text.matchAll(
+      /\bBusiness[ \t]+License[ \t]*[:：=＝][ \t]*(?:\[[ \t]*)?(\d+(?:[ \t]*-[ \t]*\d+)*)(?![\d-])/gi
     )
   );
 
@@ -17,6 +34,10 @@ function extractBusinessInfo() {
 
   const businessNumber = validNumber?.[1].replace(/\D/g, "") ?? null;
   const invalidBusinessNumber = !businessNumber && numberCandidates.length > 0;
+
+  const englishCompanyName = footerItems
+  .map((item) => item.match(/^Company[ \t]*[:：=＝][ \t]*(.+)$/i)?.[1]?.trim())
+  .find(Boolean);
 
   const companyName =
     text.match(
@@ -28,12 +49,21 @@ function extractBusinessInfo() {
     ?? text.match(
       /(?:^|\n)[ \t]*((?:\(주\)|주식회사)[^\n|]+)\n[ \t]*사업자\s*(?:등록\s*)?번호/
     )?.[1]?.trim()
+    ?? englishCompanyName
+    ?? text.match(
+      /\bCompany[ \t]*<?[ \t]*[:：=＝][ \t]*([^\n|ㅣ]+?)(?=[ \t]*(?:(?:CEO|Business[ \t]+License)[ \t]*[:：=＝]|[\n|ㅣ]|$))/i
+    )?.[1]?.trim()
     ?? null;
 
+  const footerCeo = Array.from(
+  document.querySelectorAll("footer li, .footer_pc li"),
+  (item) => item.textContent.trim().match(/^CEO\s*[:：=＝]\s*(.+)$/i)?.[1]?.trim()
+  ).find(Boolean);
+
   const representativeName =
-    text.match(
-      /대표(?:이사|자|명)?\s*[:：]\s*([^\n|]+?)(?=\s*(?:개인정보|(?:주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일)\s*[:：]|\(\d{5}\))|[\n|]|$)/
-    )?.[1]?.trim() ?? null;
+  text.match(
+    /(?:대표(?:이사|자|명)?|\bCEO\b)[ \t]*[:：=＝][ \t]*([^\n|ㅣ]+?)(?=[ \t]*(?:개인정보|(?:사업장\s*(?:주소|소재지)|주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일|Business[ \t]+License)[ \t]*[:：=＝]|\(\d{5}\))|[\n|ㅣ]|$)/i
+  )?.[1]?.trim() || footerCeo || null;
 
   const addressEnd =
     /[ \t]*(?:(?:사업자\s*(?:등록\s*)?번호|통신판매업(?:\s*신고(?:\s*번호)?)?|전화번호|대표번호|이메일|개인정보담당자|대표이사|대표자|상호명|상호|법인명|회사명)\s*[:：=]|\||\n)/;
