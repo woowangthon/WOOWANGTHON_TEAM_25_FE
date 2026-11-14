@@ -166,19 +166,46 @@ function buildScanChecks(scanResult, businessInfo) {
       ([key]) => verification[key] === "MATCH"
     ).length;
 
+    const mismatchCount = fields.filter(
+      ([key]) => verification[key] === "MISMATCH"
+    ).length;
+
+    const submittedName =
+      scanResult.business_info?.representative_name
+      || businessInfo.representativeName;
+    const officialNames = ftc.official_info?.representative_names;
+
     const fieldResults = fields.map(([key, name]) => {
       const result = verification[key];
+
       if (result === "MATCH") return `${name} 일치`;
       if (result === "SKIPPED") return `${name} 대조 생략`;
+
+      if (result === "MISMATCH") {
+        if (
+          key === "representative_name"
+          && submittedName
+          && Array.isArray(officialNames)
+          && officialNames.length > 0
+        ) {
+          return `${name} 불일치 (페이지 표시: ${submittedName}, 공정위 등록: ${officialNames.join(", ")})`;
+        }
+
+        return `${name} 불일치`;
+      }
+
       return `${name} 확인 불가`;
     });
 
-    if (matchCount > 0) {
+    if (mismatchCount > 0) {
+      ftcCheck.label = `${mismatchCount}개 항목 불일치`;
+    } else if (matchCount > 0) {
       ftcCheck.label = `${matchCount}개 항목 일치`;
+      if (matchCount === fields.length) {
+        ftcCheck.status = "match";
+      }
     }
-    if (matchCount === fields.length) {
-      ftcCheck.status = "match";
-    }
+
     ftcCheck.reason = fieldResults.join(" · ");
   }
 
@@ -209,14 +236,19 @@ function buildScanChecks(scanResult, businessInfo) {
     ? scanResult.risk_factors
     : [];
 
-  const riskMessages = riskFactors
-    .filter((factor) => typeof factor?.message === "string" && factor.message.trim())
-    .map((factor) => {
-      const message = factor.message.trim();
-      return Number.isFinite(factor.points)
+  const riskMessages = riskFactors.flatMap((factor) => {
+    const message = [factor?.message, factor?.reason]
+      .find((value) => typeof value === "string" && value.trim())
+      ?.trim();
+
+    if (!message) return [];
+
+    return [
+      Number.isFinite(factor.points)
         ? `${message} (${factor.points}점)`
-        : message;
-    });
+        : message
+    ];
+  });
 
   if (riskMessages.length > 0) {
     verdictReason += ` 근거: ${riskMessages.join(" · ")}`;
