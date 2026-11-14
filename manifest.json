@@ -2,12 +2,14 @@
   "manifest_version": 3,
   "name": "우왕톤 사업자정보 확인",
   "version": "0.1.0",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "webNavigation"],
   "host_permissions": [
-  "http://127.0.0.1/*",
-  "http://*/*",
-  "https://*/*"
+    "http://*/*",
+    "https://*/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html"
   }
