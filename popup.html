@@ -23,6 +23,7 @@
 
       p {
         line-height: 1.5;
+        word-break: keep-all;
         overflow-wrap: anywhere;
       }
 
@@ -41,6 +42,37 @@
       .result p {
         margin: 4px 0;
         font-size: 13px;
+      }
+
+      .result .result-reason,
+      .result-details {
+        line-height: 1.6;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+
+      .result .result-reason {
+        white-space: pre-line;
+      }
+
+      .result .result-score {
+        margin-top: 8px;
+        font-weight: 600;
+      }
+
+      .result-details-title {
+        margin: 8px 0 4px;
+        font-size: 13px;
+      }
+
+      .result-details {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 13px;
+      }
+
+      .result-details li + li {
+        margin-top: 4px;
       }
 
       .match { color: #176534; }

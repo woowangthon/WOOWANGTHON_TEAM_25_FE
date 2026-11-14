@@ -206,7 +206,7 @@ function buildScanChecks(scanResult, businessInfo) {
       }
     }
 
-    ftcCheck.reason = fieldResults.join(" · ");
+    ftcCheck.reason = fieldResults.join("\n");
   }
 
   const verdict = scanResult.verdict;
@@ -228,10 +228,6 @@ function buildScanChecks(scanResult, businessInfo) {
     verdictReason = "백엔드에서 반환한 판정이에요.";
   }
 
-  if (Number.isFinite(riskScore)) {
-    verdictReason += ` 위험 점수 ${riskScore}점.`;
-  }
-
   const riskFactors = Array.isArray(scanResult.risk_factors)
     ? scanResult.risk_factors
     : [];
@@ -250,10 +246,6 @@ function buildScanChecks(scanResult, businessInfo) {
     ];
   });
 
-  if (riskMessages.length > 0) {
-    verdictReason += ` 근거: ${riskMessages.join(" · ")}`;
-  }
-
   return [
     {
       title: "국세청 사업자 상태",
@@ -267,7 +259,9 @@ function buildScanChecks(scanResult, businessInfo) {
       title: "종합 판정",
       status: "unknown",
       label: verdictLabel,
-      reason: verdictReason
+      reason: verdictReason,
+      score: riskScore,
+      details: riskMessages
     }
   ];
 }
@@ -288,9 +282,35 @@ function renderCheckResults(checks) {
     label.textContent = check.label;
 
     const reason = document.createElement("p");
+    reason.className = "result-reason";
     reason.textContent = check.reason;
 
     card.append(title, label, reason);
+
+    if (Number.isFinite(check.score)) {
+      const score = document.createElement("p");
+      score.className = "result-score";
+      score.textContent = `총 위험 점수 ${check.score}점`;
+      card.append(score);
+    }
+
+    if (check.details?.length) {
+      const heading = document.createElement("h4");
+      heading.className = "result-details-title";
+      heading.textContent = "위험 근거";
+
+      const list = document.createElement("ul");
+      list.className = "result-details";
+
+      for (const detail of check.details) {
+        const item = document.createElement("li");
+        item.textContent = detail;
+        list.append(item);
+      }
+
+      card.append(heading, list);
+    }
+
     container.append(card);
   }
 }
