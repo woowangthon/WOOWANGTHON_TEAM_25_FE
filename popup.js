@@ -4,17 +4,11 @@ function extractBusinessInfo() {
   const text = (document.body?.innerText ?? "")
     .replace(/\r/g, "")
     .replace(/[ \t\u00a0]+/g, " ");
-  
+
   const footerItems = Array.from(
     document.querySelectorAll("footer li, .footer_pc li"),
     (item) => item.textContent.trim()
   );
-
-  const englishBusinessNumbers = footerItems
-    .map((item) =>
-      item.match(/^Business[ \t]+License[ \t]*[:：=＝][ \t]*(\d+(?: *- *\d+)*)$/i)
-    )
-    .filter(Boolean);
 
   const numberCandidates = Array.from(
     text.matchAll(
@@ -36,8 +30,10 @@ function extractBusinessInfo() {
   const invalidBusinessNumber = !businessNumber && numberCandidates.length > 0;
 
   const englishCompanyName = footerItems
-  .map((item) => item.match(/^Company[ \t]*[:：=＝][ \t]*(.+)$/i)?.[1]?.trim())
-  .find(Boolean);
+    .map((item) =>
+      item.match(/^Company[ \t]*[:：=＝][ \t]*(.+)$/i)?.[1]?.trim()
+    )
+    .find(Boolean);
 
   const companyName =
     text.match(
@@ -55,15 +51,14 @@ function extractBusinessInfo() {
     )?.[1]?.trim()
     ?? null;
 
-  const footerCeo = Array.from(
-  document.querySelectorAll("footer li, .footer_pc li"),
-  (item) => item.textContent.trim().match(/^CEO\s*[:：=＝]\s*(.+)$/i)?.[1]?.trim()
-  ).find(Boolean);
+  const footerCeo = footerItems
+    .map((item) => item.match(/^CEO\s*[:：=＝]\s*(.+)$/i)?.[1]?.trim())
+    .find(Boolean);
 
   const representativeName =
-  text.match(
-    /(?:대표(?:이사|자|명)?|\bCEO\b)[ \t]*[:：=＝][ \t]*([^\n|ㅣ]+?)(?=[ \t]*(?:개인정보|(?:사업장\s*(?:주소|소재지)|주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일|Business[ \t]+License)[ \t]*[:：=＝]|\(\d{5}\))|[\n|ㅣ]|$)/i
-  )?.[1]?.trim() || footerCeo || null;
+    text.match(
+      /(?:대표(?:이사|자|명)?|\bCEO\b)[ \t]*[:：=＝][ \t]*([^\n|ㅣ]+?)(?=[ \t]*(?:개인정보|(?:사업장\s*(?:주소|소재지)|주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일|Business[ \t]+License)[ \t]*[:：=＝]|\(\d{5}\))|[\n|ㅣ]|$)/i
+    )?.[1]?.trim() || footerCeo || null;
 
   const addressEnd =
     /[ \t]*(?:(?:사업자\s*(?:등록\s*)?번호|통신판매업(?:\s*신고(?:\s*번호)?)?|전화번호|대표번호|이메일|개인정보담당자|대표이사|대표자|상호명|상호|법인명|회사명)\s*[:：=]|\||\n)/;
@@ -144,32 +139,103 @@ function buildScanChecks(scanResult, businessInfo) {
     ntsReason = "페이지에서 사업자번호를 찾지 못했어요.";
   }
 
+  const ftcCheck = {
+    title: "공정위 업체 정보 대조",
+    status: "unknown",
+    label: "확인 불가",
+    reason: "공정위 대조 결과를 확인할 수 없어요."
+  };
+
+  if (ftc?.status === "not_configured") {
+    ftcCheck.reason = "공정위 조회가 아직 설정되지 않았어요.";
+  } else if (ftc?.status === "completed" && ftc.match_status === "NO_MATCH") {
+    ftcCheck.label = "검색 결과 없음";
+    ftcCheck.reason = ftc.search_method === "BUSINESS_NAME"
+      ? "공정위에서 페이지에 표시된 상호명으로 업체를 찾지 못했어요."
+      : "공정위에서 일치하는 업체를 찾지 못했어요.";
+  } else if (ftc?.status === "completed" && ftc.verification) {
+    const verification = ftc.verification;
+    const fields = [
+      ["business_number", "사업자번호"],
+      ["business_name", "상호"],
+      ["representative_name", "대표자명"],
+      ["business_address", "주소"]
+    ];
+
+    const matchCount = fields.filter(
+      ([key]) => verification[key] === "MATCH"
+    ).length;
+
+    const fieldResults = fields.map(([key, name]) => {
+      const result = verification[key];
+      if (result === "MATCH") return `${name} 일치`;
+      if (result === "SKIPPED") return `${name} 대조 생략`;
+      return `${name} 확인 불가`;
+    });
+
+    if (matchCount > 0) {
+      ftcCheck.label = `${matchCount}개 항목 일치`;
+    }
+    if (matchCount === fields.length) {
+      ftcCheck.status = "match";
+    }
+    ftcCheck.reason = fieldResults.join(" · ");
+  }
+
+  const verdict = scanResult.verdict;
+  const riskScore = scanResult.risk_score;
+
+  let verdictLabel = verdict ?? "확인 불가";
+  let verdictReason = "종합 판정 결과를 확인할 수 없어요.";
+
+  if (verdict === "LOW_RISK") {
+    verdictLabel = "낮은 위험";
+    verdictReason = "백엔드 검사 결과 위험도가 낮게 나왔어요.";
+  } else if (verdict === "INSUFFICIENT_DATA") {
+    verdictLabel = "정보 부족";
+    verdictReason = "종합 판정에 필요한 검사 정보가 부족해요.";
+  } else if (verdict === "UNDETERMINED") {
+    verdictLabel = "미정";
+    verdictReason = "백엔드에서 아직 종합 판정을 내리지 않았어요.";
+  } else if (verdict) {
+    verdictReason = "백엔드에서 반환한 판정이에요.";
+  }
+
+  if (Number.isFinite(riskScore)) {
+    verdictReason += ` 위험 점수 ${riskScore}점.`;
+  }
+
+  const riskFactors = Array.isArray(scanResult.risk_factors)
+    ? scanResult.risk_factors
+    : [];
+
+  const riskMessages = riskFactors
+    .filter((factor) => typeof factor?.message === "string" && factor.message.trim())
+    .map((factor) => {
+      const message = factor.message.trim();
+      return Number.isFinite(factor.points)
+        ? `${message} (${factor.points}점)`
+        : message;
+    });
+
+  if (riskMessages.length > 0) {
+    verdictReason += ` 근거: ${riskMessages.join(" · ")}`;
+  }
+
   return [
     {
       title: "국세청 사업자 상태",
       status: isActive ? "match" : "unknown",
-      label: isActive ? "계속사업자" : (businessStatus ?? "확인 불가"),
+      label: nts?.business_status_description
+        ?? (isActive ? "계속사업자" : (businessStatus ?? "확인 불가")),
       reason: ntsReason
     },
-    {
-      title: "공정위 업체 정보 대조",
-      status: "unknown",
-      label: "확인 불가",
-      reason: ftc?.status === "not_configured"
-        ? "공정위 조회가 아직 설정되지 않았어요."
-        : "공정위 대조 결과를 이 화면에서 확인할 수 없어요."
-    },
+    ftcCheck,
     {
       title: "종합 판정",
       status: "unknown",
-      label: scanResult.verdict === "UNDETERMINED"
-        ? "미정"
-        : (scanResult.verdict ?? "확인 불가"),
-      reason: scanResult.verdict === "UNDETERMINED"
-        ? "백엔드에서 아직 종합 판정을 내리지 않았어요."
-        : scanResult.verdict
-          ? "백엔드에서 반환한 판정이에요."
-          : "종합 판정 결과를 확인할 수 없어요."
+      label: verdictLabel,
+      reason: verdictReason
     }
   ];
 }
