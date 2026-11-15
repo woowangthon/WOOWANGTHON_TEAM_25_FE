@@ -554,13 +554,17 @@ function extractBusinessInfo() {
     .map((item) => item.match(/^CEO\s*[:：=＝]\s*(.+)$/i)?.[1]?.trim())
     .find(Boolean);
 
+  const multilineRepresentative = text.match(
+    /^[ \t]*(?:대표(?:이사|자|명)?|CEO)[ \t]*[:：=＝]?[ \t]*\n[ \t]*([^\n|ㅣ]+)/im
+  )?.[1]?.trim();
+
   const representativeName =
     text.match(
-      /(?:대표(?:이사|자|명)?|\bCEO\b)[ \t]*[:：=＝][ \t]*([^\n|ㅣ]+?)(?=[ \t]*(?:개인정보|(?:사업장\s*(?:주소|소재지)|주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일|Business[ \t]+License)[ \t]*[:：=＝]|\(\d{5}\))|[\n|ㅣ]|$)/i
-    )?.[1]?.trim() || footerCeo || null;
+      /(?:대표(?:이사|자|명)?|\bCEO\b)[ \t]*[:：=＝][ \t]*([^\n|ㅣ]+?)(?=[ \t]*(?:개인정보|(?:사업장\s*(?:주소|소재지)|본사(?:[ \t]*주소)?|주소|사업자\s*(?:등록\s*)?번호|통신판매업|전화번호|이메일|Business[ \t]+License)[ \t]*[:：=＝]|\(\d{5}\))|[\n|ㅣ]|$)/i
+    )?.[1]?.trim() || footerCeo || multilineRepresentative || null;
 
   const addressEnd =
-    /[ \t]*(?:(?:사업자\s*(?:등록\s*)?번호|통신판매업(?:\s*신고(?:\s*번호)?)?|전화번호|대표번호|이메일|개인정보담당자|대표이사|대표자|상호명|상호|법인명|회사명)\s*[:：=]|\||\n)/;
+    /[ \t]*(?:(?:사업자\s*(?:등록\s*)?번호|통신판매업(?:\s*신고(?:\s*번호)?)?|전화번호|연락처|대표번호|이메일|개인정보담당자|대표이사|대표자|상호명|상호|법인명|회사명)\s*[:：=]|\||\n)/;
 
   const businessNumberIndex =
     validNumber?.index ?? numberCandidates[0]?.index;
