@@ -1,0 +1,8 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>합성 단계별 화면</title></head><body>
+<h1>합성 상점</h1><section id="stage"></section><nav><a href="?stage=reward">보상</a> | <a href="?stage=earnings">적립</a> | <a href="?stage=restricted">제한</a> | <a href="?stage=tax">세금 조건</a> | <a href="?stage=deduction">차감 안내</a> | <a href="?stage=menu">메뉴만</a></nav>
+<script>
+const cases = { reward: "리뷰를 작성하면 보상 포인트를 지급합니다.", earnings: "수익금 적립이 완료되었습니다.", restricted: "계정 확인 전에는 출금이 제한됩니다.", tax: "세금 납부가 확인되면 수익금을 받을 수 있습니다.", deduction: "판매대금에서 수수료를 차감한 뒤 지급합니다.", menu: "출금 신청" };
+const choice = new URLSearchParams(location.search).get("stage") || "reward";
+const node = document.createElement(choice === "menu" ? "button" : "p");
+node.textContent = cases[choice] || cases.reward; document.getElementById("stage").append(node);
+</script></body></html>

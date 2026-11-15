@@ -1,0 +1,13 @@
+{
+  "name": "woowangthon-team-25-fe",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:backend": "playwright test tests/backend.spec.js",
+    "mock": "node tests/manual-server.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2"
+  }
+}

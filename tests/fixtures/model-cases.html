@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>합성 상점 문구 확인</title>
+  </head>
+  <body>
+    <h1>합성 상점</h1>
+    <main><section id="caseContent"></section></main>
+    <script>
+      // Show exactly one synthetic case. Expected labels and other cases are
+      // deliberately absent from the rendered page sent to the analyzer.
+      const cases = {
+        "withdrawal-lock": { text: "출금 제한을 풀려면 5만 원을 먼저 입금하세요." },
+        "deposit-payout": { text: "보증금 입금이 확인되면 판매대금을 지급합니다." },
+        "fee-deduction": { text: "판매대금에서 수수료를 차감한 뒤 지급합니다." },
+        "purchase-points": { text: "상품 구매에 사용할 포인트를 충전하세요." },
+        "menu-only": { text: "출금 신청", button: true },
+        "prevention": { text: "출금 전에 수수료를 보내라고 하면 거래를 중단하세요." }
+      };
+      const requested = new URLSearchParams(location.search).get("case");
+      const name = Object.hasOwn(cases, requested) ? requested : "withdrawal-lock";
+      const selected = cases[name];
+      const content = document.getElementById("caseContent");
+      content.dataset.case = name;
+      const element = document.createElement(selected.button ? "button" : "p");
+      if (selected.button) element.type = "button";
+      element.textContent = selected.text;
+      content.append(element);
+    </script>
+  </body>
+</html>

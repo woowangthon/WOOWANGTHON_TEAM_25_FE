@@ -78,20 +78,195 @@
       .match { color: #176534; }
       .mismatch { color: #b42318; }
       .unknown { color: #755800; }
+
+      .advance-payment-card {
+        margin-bottom: 20px;
+        padding: 16px;
+        border: 1px solid #e8be67;
+        border-radius: 10px;
+        background: #fffbf0;
+      }
+
+      .advance-payment-card h2 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        line-height: 1.5;
+        word-break: keep-all;
+      }
+
+      .advance-payment-card p {
+        margin: 0 0 12px;
+        font-size: 13px;
+      }
+
+      .advance-payment-answers {
+        display: grid;
+        gap: 8px;
+      }
+
+      .advance-payment-answers button {
+        padding: 10px 12px;
+        border: 1px solid #c7b78f;
+        border-radius: 6px;
+        background: #fff;
+        color: inherit;
+        font: inherit;
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .advance-payment-answers button[aria-pressed="true"] {
+        border-color: #755800;
+        background: #fff0c2;
+        font-weight: 700;
+      }
+
+      .advance-payment-answers button:focus-visible {
+        outline: 2px solid #755800;
+        outline-offset: 2px;
+      }
+
+      .advance-payment-card .advance-payment-feedback:not(:empty) {
+        margin: 12px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid #e8be67;
+        font-weight: 600;
+      }
+
+      .advance-payment-warning {
+        margin-bottom: 16px;
+        padding: 12px;
+        border: 1px solid #b42318;
+        border-radius: 6px;
+        background: #fff1f0;
+        color: #8b1a12;
+      }
+
+      .advance-payment-warning blockquote {
+        margin: 8px 0 0;
+        padding-left: 10px;
+        border-left: 3px solid #b42318;
+        font-size: 13px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .advance-payment-warning p {
+        margin-bottom: 0;
+      }
+      .flow-review { margin-bottom: 20px; background: #f8fafc; }
+      .flow-review h2 { margin: 0 0 8px; font-size: 16px; color: #755800; }
+      .flow-review button { margin-top: 8px; padding: 7px; cursor: pointer; }
+      #flowHistory { padding-left: 18px; }
+      #flowHistory li { margin: 12px 0; font-size: 12px; overflow-wrap: anywhere; }
+      #flowHistory p { white-space: pre-wrap; }
+      #flowHistory time { color: #555; }
+      #flowPolicyChecks { padding-left: 18px; }
+      #flowPolicyChecks li { margin: 10px 0; font-size: 12px; overflow-wrap: anywhere; }
+      #flowPolicyChecks p { font-weight: 600; }
+      #advancePaymentEvidence a { display: block; font-size: 12px; overflow-wrap: anywhere; margin-top: 6px; }
+      #authForm { display: grid; gap: 8px; }
+      #authForm label { display: grid; gap: 4px; font-size: 13px; }
+      #authForm input, #authForm select { box-sizing: border-box; width: 100%; padding: 8px; }
+      #authForm button, #authAccount button { padding: 8px; cursor: pointer; }
+      #authMessage { font-size: 13px; }
+      #authAccount { margin-bottom: 12px; }
+      #authAccount p { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     </style>
   </head>
   <body>
+    <section id="authPanel" class="result" aria-labelledby="authHeading">
+      <h1 id="authHeading">우왕톤</h1>
+      <p id="authIntro">이용 가능한 검사 방식을 확인하고 있어요.</p>
+      <form id="authForm">
+        <label>서버
+          <select id="authServer">
+            <option value="https://yeong.dev/woowang">우왕톤 서버</option>
+            <option value="http://127.0.0.1:8000">내 PC의 Django</option>
+          </select>
+        </label>
+        <div id="authCredentials" hidden>
+          <label>아이디 <input id="authUsername" name="username" autocomplete="username" maxlength="150" required></label>
+          <label>비밀번호 <input id="authPassword" name="password" type="password" autocomplete="current-password" maxlength="1024" required></label>
+          <button id="loginButton" type="submit">로그인하고 검사</button>
+        </div>
+      </form>
+      <p id="authMessage" role="status" aria-live="polite">로그인 상태를 확인하는 중…</p>
+      <button id="demoRetryButton" type="button" hidden>다시 확인</button>
+    </section>
+    <section id="authAccount" hidden aria-label="로그인한 계정">
+      <p><strong id="authUserLabel"></strong><button id="logoutButton" type="button">로그아웃</button></p>
+      <button id="retryScanButton" type="button" hidden>다시 검사</button>
+    </section>
+    <div id="scanContent" hidden>
+    <section id="advancePaymentCard" class="advance-payment-card"
+      aria-labelledby="advancePaymentQuestion" hidden>
+      <div id="advancePaymentWarning" class="advance-payment-warning" role="alert" hidden>
+        <h2>입금하지 마세요</h2>
+        <p id="advancePaymentAnswerSource" hidden>직접 선택한 답변에 따른 경고예요.</p>
+        <p id="advancePaymentAIMessage" hidden>판매대금을 받기 전에 별도 입금을 요구하는 문구가 확인됐어요.</p>
+        <div id="advancePaymentEvidence"></div>
+      </div>
+      <h2 id="advancePaymentQuestion">판매대금을 받기 전에 돈을 먼저 보내라고 했나요?</h2>
+      <p>상대방이나 고객센터가 ‘수수료를 보내야 돈을 받을 수 있어요’ 또는 ‘본인 확인을 위해 먼저 충전하세요’라고 했는지 떠올려 보세요.</p>
+      <div class="advance-payment-answers" role="group" aria-labelledby="advancePaymentQuestion">
+        <button type="button" data-advance-payment-answer="yes" aria-pressed="false">먼저 보내라고 했어요</button>
+        <button type="button" data-advance-payment-answer="no" aria-pressed="false">그런 말은 없었어요</button>
+        <button type="button" data-advance-payment-answer="unsure" aria-pressed="false">잘 모르겠어요</button>
+      </div>
+      <p id="advancePaymentFeedback" class="advance-payment-feedback" role="status" aria-atomic="true"></p>
+    </section>
+
+    <section class="result flow-review" aria-labelledby="flowAssessment">
+      <h2 id="flowAssessment">출금 조건 미확인</h2>
+      <p id="flowStages"></p>
+      <p id="flowCoverage">로그인 뒤 화면과 외부 고객센터 대화는 확인하지 못했어요.</p>
+      <ul id="flowPolicyChecks" aria-label="공개 안내 확인 결과"></ul>
+      <p>이미 볼 수 있는 안내 화면이 있다면 그 화면에서 팝업을 다시 열어 확인하세요.</p>
+      <details>
+        <summary>이 사이트에서 관찰한 안내와 출처</summary>
+        <ul id="flowHistory"></ul>
+      </details>
+      <p>팝업을 연 화면의 기록을 같은 사이트에서 이어 봐요. 기록은 브라우저 세션 동안 최대 2시간 유지돼요.</p>
+      <button id="clearFlowHistory" type="button" disabled>이 사이트 기록 지우기</button>
+    </section>
+
     <h1>사업자정보 확인</h1>
     <p>사업자번호 <strong id="businessNumber">—</strong></p>
+    <p id="businessNumberIssueDetail" hidden></p>
     <p>상호 <strong id="companyName">—</strong></p>
     <p>대표자 <strong id="representativeName">—</strong></p>
     <p id="status" role="status">페이지를 읽는 중…</p>
+    <p id="publicApiCacheNote" hidden></p>
 
     <hr>
 
     <h2>검사 결과</h2>
+    <p id="riskScopeNote">서버 응답 후 사업자·문구 분석 점수와 확인 범위를 표시해요.</p>
+    <section id="scoreBreakdown" class="result" aria-labelledby="scoreBreakdownHeading" aria-live="polite" hidden>
+      <h3 id="scoreBreakdownHeading">위험 점수 구성</h3>
+      <p id="scorePolicyNotice" class="unknown" role="status" hidden></p>
+      <p>사업자정보 <strong id="businessRiskScore">—</strong></p>
+      <p id="businessScoreCapNote" class="result-reason"></p>
+      <p>AI 분석·사이트 관찰 <strong id="aiRiskScore">—</strong></p>
+      <p id="aiScoreStatus" class="result-reason"></p>
+      <p id="aiScoreCapNote" class="result-reason" hidden></p>
+      <p>합계 <strong id="totalRiskScore">—</strong></p>
+      <p id="scoreCompleteness" class="result-reason"></p>
+    </section>
+    <section id="siteChecksPanel" class="result" aria-labelledby="siteChecksHeading" hidden>
+      <h3 id="siteChecksHeading">공지·구매후기·신청 메뉴 확인</h3>
+      <ul id="siteCheckResults"></ul>
+      <p id="siteChecksScopeNote" class="result-reason"></p>
+    </section>
     <div id="checkResults" aria-live="polite"></div>
+    </div>
 
+    <script src="auth.js"></script>
+    <script src="flow.js"></script>
+    <script src="site-checks.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "version": "0.7.2",
+  "icons": [
+    {
+      "path": "icons/icon-16.png",
+      "size": 16,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "sha256": "46b2b41bdaa1078b953565a2b215d90b8e6303a4e3c94a723e72779a1c8da2ed"
+    },
+    {
+      "path": "icons/icon-32.png",
+      "size": 32,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "sha256": "c66d4ca65936d87174de545073c5ca7ee05ba30a3fbb778bf4cd818a256ddc53"
+    },
+    {
+      "path": "icons/icon-48.png",
+      "size": 48,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "sha256": "f474ca52cbb085979c26a0f79195bb63f59cdfed5b94fb92e932d5ff7d9a3540"
+    },
+    {
+      "path": "icons/icon-128.png",
+      "size": 128,
+      "format": "PNG",
+      "mode": "RGBA",
+      "transparent": true,
+      "sha256": "2d60a51180986ea70ce9e77157b79835ae61c22b3096adfe30767686cfbf1d54"
+    }
+  ],
+  "manifest_permissions_and_endpoints_unchanged": true,
+  "five_runtime_files_byte_identical_to_v0_7_1": true,
+  "full_fe_suite_rerun": false,
+  "installed_chrome_check": false,
+  "github_writes": 0,
+  "aws_changes": 0
+}
